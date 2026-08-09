@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from dotenv import load_dotenv
@@ -17,9 +18,12 @@ console = Console()
 
 @app.command()
 def run(
-    engine: EngineName = typer.Option(..., help="Research engine to execute."),
-    brief: Path = typer.Option(..., exists=True, dir_okay=False, readable=True),
-    out: Path = typer.Option(Path("runs"), help="Run artifact directory."),
+    engine: Annotated[EngineName, typer.Option(help="Research engine to execute.")],
+    brief: Annotated[
+        Path,
+        typer.Option(exists=True, dir_okay=False, readable=True),
+    ],
+    out: Annotated[Path, typer.Option(help="Run artifact directory.")] = Path("runs"),
 ):
     """Execute one research brief with an explicit engine."""
     load_dotenv()
