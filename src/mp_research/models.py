@@ -65,4 +65,5 @@ class EvidenceBundle(BaseModel):
     alternatives: list[str] = Field(default_factory=list)
     implementation_implications: list[str] = Field(default_factory=list)
     raw_artifacts: list[str] = Field(default_factory=list)
+    raw_output: Any | None = Field(default=None, exclude=True)
     narrative_report: str | None = None
