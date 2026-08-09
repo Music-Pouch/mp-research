@@ -3,15 +3,11 @@ name: Run research
 on:
   workflow_dispatch:
     inputs:
-      brief:
-        description: Research brief to execute
+      research_spike:
+        description: Full URL of a Music Pouch GitHub research-spike issue
         required: true
-        type: choice
-        default: examples/briefs/technical-archaeology.md
-        options:
-          - examples/briefs/technical-archaeology.md
-          - examples/briefs/market-product.md
-          - examples/briefs/exploratory.md
+        type: string
+        default: https://github.com/Music-Pouch/mp-radio/issues/1
 
 permissions:
   contents: read
@@ -23,6 +19,7 @@ jobs:
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+      GH_TOKEN: ${{ secrets.MP_RESEARCH_GITHUB_TOKEN }}
 
     steps:
       - name: Check out repository
@@ -42,12 +39,31 @@ jobs:
         run: |
           test -n "$OPENAI_API_KEY" || { echo "OPENAI_API_KEY is not configured"; exit 1; }
           test -n "$TAVILY_API_KEY" || { echo "TAVILY_API_KEY is not configured"; exit 1; }
+          test -n "$GH_TOKEN" || { echo "MP_RESEARCH_GITHUB_TOKEN is not configured"; exit 1; }
+
+      - name: Build brief from research spike
+        env:
+          RESEARCH_SPIKE_URL: ${{ inputs.research_spike }}
+        shell: bash
+        run: |
+          case "$RESEARCH_SPIKE_URL" in
+            https://github.com/Music-Pouch/*/issues/[0-9]*) ;;
+            *) echo "research_spike must be a Music-Pouch GitHub issue URL"; exit 1 ;;
+          esac
+
+          mkdir -p .research-input
+          title="$(gh issue view "$RESEARCH_SPIKE_URL" --json title --jq '.title')"
+          body="$(gh issue view "$RESEARCH_SPIKE_URL" --json body --jq '.body')"
+          {
+            printf '# %s\n\n' "$title"
+            printf '%s\n' "$body"
+          } > .research-input/research-spike.md
 
       - name: Run GPT Researcher benchmark
         run: |
           mp-research \
             --engine gpt-researcher \
-            --brief "${{ inputs.brief }}" \
+            --brief .research-input/research-spike.md \
             --out runs
 
       - name: Upload research artifacts
