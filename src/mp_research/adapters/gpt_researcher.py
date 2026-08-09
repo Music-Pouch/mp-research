@@ -55,8 +55,10 @@ class GPTResearcherAdapter(ResearchAdapter):
             raw_artifacts=["raw/engine-output.json"],
             raw_output=raw_output,
             unresolved_questions=[
-                "Claim-level extraction is not implemented yet; no claims are promoted "
-                "until they can be mapped to explicit source provenance."
+                (
+                    "Claim-level extraction is not implemented yet; no claims are promoted "
+                    "until they can be mapped to explicit source provenance."
+                )
             ],
             implementation_implications=[
                 "Preserve GPT Researcher context, costs, and source records before normalization.",
