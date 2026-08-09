@@ -1,0 +1,60 @@
+name: Run research
+
+on:
+  workflow_dispatch:
+    inputs:
+      brief:
+        description: Research brief to execute
+        required: true
+        type: choice
+        default: examples/briefs/technical-archaeology.md
+        options:
+          - examples/briefs/technical-archaeology.md
+          - examples/briefs/market-product.md
+          - examples/briefs/exploratory.md
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install runner and GPT Researcher
+        run: pip install -e ".[gpt-researcher]"
+
+      - name: Verify required secrets are available
+        shell: bash
+        run: |
+          test -n "$OPENAI_API_KEY" || { echo "OPENAI_API_KEY is not configured"; exit 1; }
+          test -n "$TAVILY_API_KEY" || { echo "TAVILY_API_KEY is not configured"; exit 1; }
+
+      - name: Run GPT Researcher benchmark
+        run: |
+          mp-research run \
+            --engine gpt-researcher \
+            --brief "${{ inputs.brief }}" \
+            --out runs
+
+      - name: Upload research artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpt-researcher-${{ github.run_id }}
+          path: runs/
+          if-no-files-found: warn
+          retention-days: 14
