@@ -45,7 +45,7 @@ jobs:
 
       - name: Run GPT Researcher benchmark
         run: |
-          mp-research run \
+          mp-research \
             --engine gpt-researcher \
             --brief "${{ inputs.brief }}" \
             --out runs
