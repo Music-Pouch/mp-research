@@ -98,9 +98,10 @@ Music Pouch issue
 
 Workflow behavior:
 
-- If `OPENAI_API_KEY` is set, the workflow uses your configured paid or compatible provider settings.
-- If `OPENAI_API_KEY` is not set, the workflow starts Ollama on the runner, pulls `qwen3:4b` plus `nomic-embed-text`, and uses `duckduckgo`.
-- `TAVILY_API_KEY` is optional. `duckduckgo` is the default retriever unless you override it.
+- `provider_mode=free-game` is the default. It starts Ollama on the runner, pulls `qwen3:4b` plus `nomic-embed-text`, and uses `duckduckgo` unless the retriever input is overridden.
+- FREE GAME mode does not opt into paid providers merely because paid-provider secrets exist in the repository.
+- `provider_mode=configured` explicitly opts into the configured provider path and requires `OPENAI_API_KEY`.
+- `TAVILY_API_KEY` remains optional and is only relevant when the selected retriever requires it.
 
 A run emits:
 
