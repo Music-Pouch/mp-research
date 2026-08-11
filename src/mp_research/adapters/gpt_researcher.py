@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import importlib.metadata
 import os
 from datetime import UTC, datetime
@@ -27,9 +28,45 @@ class GPTResearcherAdapter(ResearchAdapter):
 
         metadata.model_configuration = self._collect_model_configuration()
 
+        conduct_timeout = self._timeout_seconds(
+            "MP_RESEARCH_CONDUCT_TIMEOUT_SECONDS",
+            default=900,
+        )
+        report_timeout = self._timeout_seconds(
+            "MP_RESEARCH_REPORT_TIMEOUT_SECONDS",
+            default=300,
+        )
+
+        print("[mp-research] Initializing GPT Researcher", flush=True)
         researcher = GPTResearcher(query=brief.prompt)
-        await researcher.conduct_research()
-        report: str = await researcher.write_report()
+
+        print(
+            f"[mp-research] Starting conduct_research() (timeout={conduct_timeout}s)",
+            flush=True,
+        )
+        try:
+            async with asyncio.timeout(conduct_timeout):
+                await researcher.conduct_research()
+        except TimeoutError as exc:
+            raise RuntimeError(
+                "GPT Researcher timed out during conduct_research() after "
+                f"{conduct_timeout} seconds"
+            ) from exc
+        print("[mp-research] conduct_research() completed", flush=True)
+
+        print(
+            f"[mp-research] Starting write_report() (timeout={report_timeout}s)",
+            flush=True,
+        )
+        try:
+            async with asyncio.timeout(report_timeout):
+                report: str = await researcher.write_report()
+        except TimeoutError as exc:
+            raise RuntimeError(
+                "GPT Researcher timed out during write_report() after "
+                f"{report_timeout} seconds"
+            ) from exc
+        print("[mp-research] write_report() completed", flush=True)
 
         context = researcher.get_research_context()
         costs = researcher.get_costs()
@@ -68,6 +105,19 @@ class GPTResearcherAdapter(ResearchAdapter):
                 "Do not infer claim confidence or provenance from report prose.",
             ],
         )
+
+    @staticmethod
+    def _timeout_seconds(name: str, default: int) -> int:
+        value = os.getenv(name)
+        if value is None:
+            return default
+        try:
+            seconds = int(value)
+        except ValueError as exc:
+            raise RuntimeError(f"{name} must be an integer number of seconds") from exc
+        if seconds <= 0:
+            raise RuntimeError(f"{name} must be greater than zero")
+        return seconds
 
     @staticmethod
     def _collect_model_configuration() -> dict[str, str]:
