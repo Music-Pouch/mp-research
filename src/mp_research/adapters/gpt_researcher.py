@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.metadata
+import os
 from datetime import UTC, datetime
 from typing import Any
 
@@ -23,6 +24,8 @@ class GPTResearcherAdapter(ResearchAdapter):
             metadata.engine_version = importlib.metadata.version("gpt-researcher")
         except importlib.metadata.PackageNotFoundError:
             metadata.engine_version = None
+
+        metadata.model_configuration = self._collect_model_configuration()
 
         researcher = GPTResearcher(query=brief.prompt)
         await researcher.conduct_research()
@@ -65,6 +68,36 @@ class GPTResearcherAdapter(ResearchAdapter):
                 "Do not infer claim confidence or provenance from report prose.",
             ],
         )
+
+    @staticmethod
+    def _collect_model_configuration() -> dict[str, str]:
+        keys = (
+            "RETRIEVER",
+            "FAST_LLM",
+            "SMART_LLM",
+            "STRATEGIC_LLM",
+            "EMBEDDING",
+            "OLLAMA_BASE_URL",
+            "OPENAI_API_BASE",
+            "OPENAI_BASE_URL",
+        )
+        configuration = {
+            key.lower(): value
+            for key in keys
+            if (value := os.getenv(key))
+        }
+
+        if os.getenv("OPENAI_API_KEY") == "ollama":
+            configuration["credential_mode"] = "local-openai-compatible"
+        elif os.getenv("OPENAI_API_KEY"):
+            configuration["credential_mode"] = "api-key"
+        else:
+            configuration["credential_mode"] = "unset"
+
+        if os.getenv("TAVILY_API_KEY"):
+            configuration["retriever_credential"] = "configured"
+
+        return configuration
 
     @staticmethod
     def _normalize_sources(
