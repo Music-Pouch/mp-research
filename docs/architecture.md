@@ -33,3 +33,6 @@ GPTR     ODR      STORM
 3. Missing provenance stays missing; the adapter does not fabricate it.
 4. Engine selection is explicit until RS-002 provides evidence for routing.
 5. Research engines do not accept ADRs.
+6. The GitHub issue -> brief -> evidence bundle flow stays stable across provider changes.
+7. The default runnable path should stay available without paid credits wherever practical.
+8. Paid providers are extensions, not prerequisites.
