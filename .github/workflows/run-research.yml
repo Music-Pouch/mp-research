@@ -44,6 +44,9 @@ jobs:
       RETRIEVER: ${{ inputs.retriever }}
       OLLAMA_MODEL: ${{ inputs.ollama_model }}
       OLLAMA_EMBEDDING_MODEL: ${{ inputs.ollama_embedding_model }}
+      MP_RESEARCH_CONDUCT_TIMEOUT_SECONDS: "900"
+      MP_RESEARCH_REPORT_TIMEOUT_SECONDS: "300"
+      PYTHONUNBUFFERED: "1"
 
     steps:
       - name: Check out repository
@@ -120,6 +123,25 @@ jobs:
           ollama pull "${OLLAMA_MODEL}"
           ollama pull "${OLLAMA_EMBEDDING_MODEL}"
 
+      - name: Smoke test Ollama inference
+        if: inputs.provider_mode == 'free-game'
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          echo "Smoke testing ${OLLAMA_MODEL} before GPT Researcher"
+          jq -n \
+            --arg model "$OLLAMA_MODEL" \
+            '{model: $model, prompt: "Reply with exactly OK.", stream: false}' \
+            | curl --fail --show-error --silent \
+                --max-time 170 \
+                --header 'Content-Type: application/json' \
+                --data-binary @- \
+                http://127.0.0.1:11434/api/generate \
+            | tee /tmp/ollama-smoke.json
+          echo
+          jq -e '.response | length > 0' /tmp/ollama-smoke.json >/dev/null
+          echo "Ollama inference smoke test passed"
+
       - name: Build brief from research spike
         env:
           RESEARCH_SPIKE_URL: ${{ inputs.research_spike }}
@@ -139,7 +161,10 @@ jobs:
           } > .research-input/research-spike.md
 
       - name: Run GPT Researcher
+        timeout-minutes: 20
         run: |
+          echo "Research phase timeout: ${MP_RESEARCH_CONDUCT_TIMEOUT_SECONDS}s"
+          echo "Report phase timeout: ${MP_RESEARCH_REPORT_TIMEOUT_SECONDS}s"
           mp-research \
             --engine gpt-researcher \
             --brief .research-input/research-spike.md \
@@ -157,4 +182,8 @@ jobs:
       - name: Print Ollama log on failure
         if: failure() && inputs.provider_mode == 'free-game'
         shell: bash
-        run: cat /tmp/ollama.log
+        run: |
+          echo "===== Ollama server log ====="
+          cat /tmp/ollama.log || true
+          echo "===== Ollama smoke response ====="
+          cat /tmp/ollama-smoke.json || true
