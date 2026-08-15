@@ -80,6 +80,12 @@ jobs:
             echo "STRATEGIC_LLM=ollama:${OLLAMA_MODEL}"
             echo "EMBEDDING=ollama:${OLLAMA_EMBEDDING_MODEL}"
             echo "RETRIEVER=${RETRIEVER:-duckduckgo}"
+            echo "FAST_TOKEN_LIMIT=1000"
+            echo "SMART_TOKEN_LIMIT=2000"
+            echo "STRATEGIC_TOKEN_LIMIT=1000"
+            echo "SUMMARY_TOKEN_LIMIT=500"
+            echo "MAX_ITERATIONS=2"
+            echo "MAX_SEARCH_RESULTS_PER_QUERY=3"
           } >> "$GITHUB_ENV"
 
       - name: Configure optional paid providers
